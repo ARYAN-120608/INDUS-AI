@@ -1,78 +1,80 @@
 /**
- * Indus AI — WebSocket Hook
+ * Indus AI — WebSocket Hook (Refactored to Mock Polling for Vercel Static)
  * Manages real-time connection to backend for sensor data and alerts
  */
 
 import { useEffect, useRef, useCallback } from 'react';
 import useStore from '../stores/useStore';
+import { mockTick, mockInjectFault, mockClearFault } from '../utils/mockBackend';
 
-const WS_URL = `ws://${window.location.hostname}:8000/ws/live-data`;
-const RECONNECT_INTERVAL = 3000;
+const POLL_INTERVAL = 3000;
 
 export function useWebSocket() {
-  const wsRef = useRef(null);
-  const reconnectTimeoutRef = useRef(null);
+  const pollIntervalRef = useRef(null);
   const { updateMachines, addAlert, addTicket, addIncident, setWsConnected } = useStore();
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    // Treat the "connection" as our polling loop
+    setWsConnected(true);
 
-    try {
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
+    const poll = async () => {
+      try {
+        const data = mockTick();
 
-      ws.onopen = () => {
-        console.log('[WS] Connected to Indus AI Backend');
-        setWsConnected(true);
-      };
+        if (data.type === 'sensor_update') {
+          updateMachines(data.machines || []);
+        }
 
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          if (data.type === 'sensor_update') {
-            updateMachines(data.machines || []);
-          } else if (data.type === 'anomaly_alert') {
-            addAlert(data);
-            if (data.ticket) {
-              addTicket(data.ticket);
+        if (data.new_alerts && data.new_alerts.length > 0) {
+          data.new_alerts.forEach((alertData) => {
+            addAlert(alertData);
+            if (alertData.ticket) {
+              addTicket(alertData.ticket);
             }
-            if (data.diagnosis) {
+            if (alertData.diagnosis) {
               addIncident({
-                ...data.diagnosis,
-                sop: data.sop,
-                timestamp: data.timestamp,
+                ...alertData.diagnosis,
+                sop: alertData.sop,
+                timestamp: alertData.timestamp,
               });
             }
-          }
-        } catch (err) {
-          console.error('[WS] Parse error:', err);
+          });
         }
-      };
+      } catch (err) {
+        console.error('[POLL] Error:', err);
+      }
+    };
 
-      ws.onclose = () => {
-        console.log('[WS] Disconnected. Reconnecting...');
-        setWsConnected(false);
-        reconnectTimeoutRef.current = setTimeout(connect, RECONNECT_INTERVAL);
-      };
-
-      ws.onerror = (err) => {
-        console.error('[WS] Error:', err);
-        ws.close();
-      };
-    } catch (err) {
-      console.error('[WS] Connection failed:', err);
-      reconnectTimeoutRef.current = setTimeout(connect, RECONNECT_INTERVAL);
-    }
+    // Initial poll
+    poll();
+    
+    // Start interval
+    pollIntervalRef.current = setInterval(poll, POLL_INTERVAL);
   }, [updateMachines, addAlert, addTicket, addIncident, setWsConnected]);
 
   useEffect(() => {
     connect();
     return () => {
-      if (wsRef.current) wsRef.current.close();
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, [connect]);
 
-  return wsRef;
+  // Return a mock ref to satisfy anything expecting the WebSocket object
+  // Specifically for sending messages like inject_fault
+  const mockWsRef = useRef({
+    send: (msg) => {
+      try {
+        const data = JSON.parse(msg);
+        if (data.action === "inject_fault") {
+          mockInjectFault(data.machine_id, data.fault_type);
+        } else if (data.action === "clear_fault") {
+          mockClearFault(data.machine_id);
+        }
+      } catch (e) {
+        console.error("Mock WS send failed", e);
+      }
+    }
+  });
+
+  return mockWsRef;
 }
