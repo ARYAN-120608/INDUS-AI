@@ -174,6 +174,26 @@ export const mockTick = () => {
   const readings = [];
   const new_alerts = [];
   
+  // Randomly inject faults to simulate critical errors over time
+  if (Math.random() < 0.05) { // 5% chance per tick
+    const healthyMachines = machines.filter(m => !m.active_fault);
+    if (healthyMachines.length > 0) {
+       const target = healthyMachines[Math.floor(Math.random() * healthyMachines.length)];
+       const faultTypes = Object.keys(FAULT_PROFILES);
+       const randomFault = faultTypes[Math.floor(Math.random() * faultTypes.length)];
+       target.inject_fault(randomFault);
+    }
+  }
+
+  // Randomly clear faults so they don't persist forever
+  if (Math.random() < 0.02) { // 2% chance per tick
+    const brokenMachines = machines.filter(m => m.active_fault);
+    if (brokenMachines.length > 0) {
+       const target = brokenMachines[Math.floor(Math.random() * brokenMachines.length)];
+       target.clear_fault();
+    }
+  }
+
   for (const m of machines) {
     const { reading, newly_critical } = m.tick();
     readings.push(reading);
