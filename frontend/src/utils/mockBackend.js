@@ -138,34 +138,178 @@ class Machine {
 
 const machines = Object.keys(MACHINE_PROFILES).map(type => new Machine(type));
 
+// ─── Detailed SOP Library — indexed by fault type ─────────────────────────────
+const SOP_LIBRARY = {
+  column_flooding: {
+    procedure_name: 'Distillation Column Flooding Recovery',
+    estimated_time: '3–4 hours',
+    severity: 'CRITICAL',
+    downtime_estimate: '4 hours',
+    recommended_action: 'Reduce feed rate and reflux ratio; initiate column re-stabilization',
+    steps: [
+      { step_number: 1, action: 'Immediately reduce column feed rate by 30–40% to relieve hydraulic load', safety_note: 'Wear PPE — high-temperature hydrocarbons present' },
+      { step_number: 2, action: 'Lower reflux ratio from operating value to minimum (≈2.0) to reduce vapor/liquid load', safety_note: null },
+      { step_number: 3, action: 'Monitor differential pressure across trays — target reduction below 0.05 bar/tray', safety_note: null },
+      { step_number: 4, action: 'Increase reboiler duty gradually (5% increments) to re-establish proper vapor flow', safety_note: 'Monitor temperature profile every 10 minutes' },
+      { step_number: 5, action: 'Once pressure differential normalizes, slowly ramp feed rate back up (10% per 15 min)', safety_note: null },
+      { step_number: 6, action: 'Verify tray temperatures and composition profiles return to design specifications', safety_note: null },
+      { step_number: 7, action: 'If flooding persists after 2 hours, schedule shutdown for tray inspection and cleaning', safety_note: 'Notify shift supervisor before initiating shutdown' },
+      { step_number: 8, action: 'Document event in maintenance log with timestamped sensor readings', safety_note: null },
+    ],
+  },
+
+  heat_fouling: {
+    procedure_name: 'Heat Exchanger Fouling Mitigation & Cleaning',
+    estimated_time: '6–8 hours',
+    severity: 'HIGH',
+    downtime_estimate: '6 hours',
+    recommended_action: 'Switch to standby exchanger; schedule chemical or mechanical cleaning',
+    steps: [
+      { step_number: 1, action: 'Switch process flow to standby heat exchanger HX-202 using bypass valves', safety_note: 'Confirm standby unit is pre-warmed before switching' },
+      { step_number: 2, action: 'Isolate HX-201 by closing shell-side and tube-side inlet/outlet block valves', safety_note: null },
+      { step_number: 3, action: 'Depressurize unit to 0 bar and allow to cool to ambient temperature (< 50°C)', safety_note: 'Do not open flanges until temperature is confirmed safe' },
+      { step_number: 4, action: 'Drain residual process fluid and flush with clean condensate water', safety_note: 'Collect flush water for waste treatment — do not drain to sewer' },
+      { step_number: 5, action: 'Perform CIP (Clean-In-Place) using 2% citric acid solution for 45 min if bio-fouling; hydroblast at 700 bar if mechanical fouling', safety_note: 'Full face shield and chemical suit required during CIP' },
+      { step_number: 6, action: 'Inspect tube bundle for damage, erosion, or pitting; replace fouled tubes as required', safety_note: null },
+      { step_number: 7, action: 'Reassemble, pressure test at 1.5× design pressure (hold 30 min, no leaks)', safety_note: null },
+      { step_number: 8, action: 'Return HX-201 to service; verify fouling factor < 0.0002 m²K/W within 24 hours', safety_note: null },
+    ],
+  },
+
+  pump_cavitation: {
+    procedure_name: 'Pump Station Cavitation Prevention & Repair',
+    estimated_time: '2–3 hours',
+    severity: 'HIGH',
+    downtime_estimate: '3 hours',
+    recommended_action: 'Reduce pump speed and increase suction pressure; inspect impeller',
+    steps: [
+      { step_number: 1, action: 'Reduce pump speed by 15–20% via VFD to lower cavitation-inducing velocity', safety_note: null },
+      { step_number: 2, action: 'Check and increase suction header pressure by partially closing downstream control valve', safety_note: null },
+      { step_number: 3, action: 'Verify suction strainer is clear — differential pressure across strainer should be < 0.3 bar', safety_note: 'Shut down pump before opening strainer for inspection' },
+      { step_number: 4, action: 'Inspect suction piping for any air ingestion points, loose flanges, or valve leakage', safety_note: null },
+      { step_number: 5, action: 'If cavitation noise persists after 30 minutes, take pump offline and open impeller casing', safety_note: 'Lock-out/Tag-out pump before any mechanical access' },
+      { step_number: 6, action: 'Inspect impeller for erosion pitting — replace if material loss exceeds 5% of blade area', safety_note: null },
+      { step_number: 7, action: 'Check and record vibration signature; bearing replacement required if RMS velocity > 10 mm/s', safety_note: null },
+      { step_number: 8, action: 'Restart pump and verify vibration < 4 mm/s and bearing temp < 80°C before returning to service', safety_note: null },
+    ],
+  },
+
+  compressor_surge: {
+    procedure_name: 'Compressor Anti-Surge Recovery Procedure',
+    estimated_time: '1–2 hours',
+    severity: 'CRITICAL',
+    downtime_estimate: '2 hours',
+    recommended_action: 'Open anti-surge valve; reduce speed and reload at stable operating point',
+    steps: [
+      { step_number: 1, action: 'Immediately open anti-surge recycle valve 100% to unload the compressor', safety_note: 'Surge can cause catastrophic blade damage — act within 60 seconds' },
+      { step_number: 2, action: 'Reduce compressor speed to minimum governor setpoint via turbine speed control', safety_note: null },
+      { step_number: 3, action: 'Check suction and discharge pressures — confirm surge line has been crossed', safety_note: null },
+      { step_number: 4, action: 'Inspect process for any downstream blockage causing high discharge pressure buildup', safety_note: null },
+      { step_number: 5, action: 'Allow compressor to stabilize at minimum speed for 10 minutes', safety_note: null },
+      { step_number: 6, action: 'Gradually close anti-surge valve (5% per minute) while monitoring flow vs. pressure curve', safety_note: 'Re-open immediately if surge noise (banging/reversing flow) recurs' },
+      { step_number: 7, action: 'Perform vibration analysis — if blade damage suspected, shut down for boroscope inspection', safety_note: 'Vibration > 25 mm/s requires mandatory shutdown' },
+      { step_number: 8, action: 'Recalibrate anti-surge controller setpoints with process engineer before resuming full load', safety_note: null },
+    ],
+  },
+
+  cooling_tower_failure: {
+    procedure_name: 'Cooling Tower Performance Recovery',
+    estimated_time: '2–4 hours',
+    severity: 'HIGH',
+    downtime_estimate: '3 hours',
+    recommended_action: 'Inspect fan motors, fill packing, and water distribution system',
+    steps: [
+      { step_number: 1, action: 'Check cooling water supply and return temperatures — design approach should be ≤ 5°C', safety_note: null },
+      { step_number: 2, action: 'Inspect all fan cells — verify fan blades, motor amps, and pitch angle on each cell', safety_note: 'Follow lockout procedure before entering any fan cell' },
+      { step_number: 3, action: 'Check water distribution nozzles for blockage — flush each spray nozzle with clean water', safety_note: null },
+      { step_number: 4, action: 'Inspect PVC fill packing for scaling, biological growth, or physical damage', safety_note: null },
+      { step_number: 5, action: 'Test cooling water chemistry: pH 7.0–8.5, conductivity < 3000 μS/cm, Legionella inhibitor at spec', safety_note: 'Legionella risk — no misting operations without biocide treatment confirmed' },
+      { step_number: 6, action: 'Shock-dose biocide if biological fouling is present (chlorine 5 ppm for 2 hours)', safety_note: 'Keep personnel clear during chlorination — toxic fumes possible' },
+      { step_number: 7, action: 'Replace damaged fan belts or motor bearings; re-pitch blades to design angle', safety_note: null },
+      { step_number: 8, action: 'Return to full flow and verify outlet temperature meets design spec within 30 minutes', safety_note: null },
+    ],
+  },
+
+  separator_overflow: {
+    procedure_name: 'Separator Unit Overflow Recovery',
+    estimated_time: '2–3 hours',
+    severity: 'HIGH',
+    downtime_estimate: '2.5 hours',
+    recommended_action: 'Increase liquid draw-off rate; check level controller and outlet valve operation',
+    steps: [
+      { step_number: 1, action: 'Manually open liquid outlet valve to 80% to rapidly reduce vessel liquid level', safety_note: 'Do not exceed max liquid draw-off rate — risk of hydrocarbon carryover to gas outlet' },
+      { step_number: 2, action: 'Verify level transmitter reading is accurate — compare with sight glass if available', safety_note: null },
+      { step_number: 3, action: 'Check level controller setpoint — recalibrate if output is stuck or oscillating', safety_note: null },
+      { step_number: 4, action: 'Inspect liquid outlet control valve for sticking, incorrect signal, or failure-mode issue', safety_note: null },
+      { step_number: 5, action: 'Reduce feed inlet flow by 20% until level is back within normal operating range (40–65%)', safety_note: null },
+      { step_number: 6, action: 'Verify gas-liquid interface is clean — excessive emulsification may require demulsifier dosing', safety_note: null },
+      { step_number: 7, action: 'Return level controller to auto and validate stable response before re-ramping feed', safety_note: null },
+      { step_number: 8, action: 'Inspect separator internals (mist pad, vane pack) at next planned shutdown if issue recurring', safety_note: null },
+    ],
+  },
+
+  structural_leak: {
+    procedure_name: 'Structural Integrity Leak Response & Repair',
+    estimated_time: '4–8 hours',
+    severity: 'CRITICAL',
+    downtime_estimate: '6 hours',
+    recommended_action: 'Isolate affected section immediately; deploy emergency containment and repair team',
+    steps: [
+      { step_number: 1, action: 'Trigger emergency isolation — close all upstream and downstream block valves on the affected line/vessel', safety_note: 'EVACUATE immediate area — flammable or toxic material release possible' },
+      { step_number: 2, action: 'Activate emergency containment berm; deploy absorbent booms if liquid release', safety_note: 'Ensure wind direction is checked — position response team upwind' },
+      { step_number: 3, action: 'Depressurize affected section to 0 bar via blowdown valve', safety_note: 'Blowdown to flare stack — confirm flare pilot is lit' },
+      { step_number: 4, action: 'Drain and purge section with nitrogen to < 1% LEL before any mechanical work', safety_note: 'Continuous gas monitoring required throughout repair' },
+      { step_number: 5, action: 'Inspect and locate exact leak source — use dye penetrant or ultrasonic testing for crack detection', safety_note: null },
+      { step_number: 6, action: 'For pinhole leaks: apply temporary clamp repair. For cracks > 50mm: full section replacement required', safety_note: 'All welding requires hot-work permit and fire watch' },
+      { step_number: 7, action: 'Pressure test repaired section to 1.5× MAWP; hydro-test hold for 1 hour', safety_note: null },
+      { step_number: 8, action: 'Complete incident report, root-cause analysis, and notify regulatory authority if required', safety_note: 'Spills > 50 litres must be reported to environmental authority within 2 hours' },
+    ],
+  },
+};
+
 const generateMockAlert = (machine, fault_type) => {
    const ticket_id = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
-   const displayFault = fault_type.replace('_', ' ');
+   const displayFault = fault_type.replace(/_/g, ' ');
+   const sop = SOP_LIBRARY[fault_type] || {
+     procedure_name: `SOP for ${displayFault}`,
+     estimated_time: '2 hours',
+     severity: 'HIGH',
+     downtime_estimate: '2 hours',
+     recommended_action: 'Inspect subsystem and perform maintenance.',
+     steps: [
+       { step_number: 1, action: 'Isolate the affected subsystem', safety_note: 'Follow LOTO procedure' },
+       { step_number: 2, action: 'Inspect all components for visible damage', safety_note: null },
+       { step_number: 3, action: 'Replace worn or damaged parts', safety_note: null },
+       { step_number: 4, action: 'Restart system and monitor for 30 minutes', safety_note: null },
+     ],
+   };
+
    return {
      type: 'anomaly_alert',
-     severity: 'HIGH',
+     severity: sop.severity || 'HIGH',
      machine_id: machine.machine_id,
      machine_type: machine.machine_type,
-     message: `${displayFault} detected on ${machine.machine_type} (${machine.machine_id})`,
+     message: `${displayFault.charAt(0).toUpperCase() + displayFault.slice(1)} detected on ${machine.machine_type} (${machine.machine_id})`,
      timestamp: Date.now() / 1000,
      diagnosis: {
-       fault_cause: displayFault,
+       fault_cause: displayFault.charAt(0).toUpperCase() + displayFault.slice(1),
        confidence: 0.95,
-       severity: 'HIGH',
-       recommendation: 'Inspect subsystem and perform maintenance.'
+       severity: sop.severity || 'HIGH',
+       downtime_estimate: sop.downtime_estimate,
+       recommended_action: sop.recommended_action,
      },
      ticket: {
        ticket_id,
        machine_id: machine.machine_id,
-       title: `Auto-Ticket: ${displayFault}`,
+       title: `Auto-Ticket: ${displayFault.charAt(0).toUpperCase() + displayFault.slice(1)} — ${machine.machine_type}`,
        status: 'OPEN',
-       priority: 'HIGH',
+       priority: sop.severity || 'HIGH',
        created_at: new Date().toISOString()
      },
      sop: {
-       procedure_name: `SOP for ${displayFault}`,
-       estimated_time: '2 hours',
-       steps: ['Isolate subsystem', 'Inspect for damage', 'Replace worn parts', 'Restart and monitor']
+       procedure_name: sop.procedure_name,
+       estimated_time: sop.estimated_time,
+       steps: sop.steps,
      }
    };
 };

@@ -114,13 +114,13 @@ function DiagnosisCard({ incident, index }) {
         <DetailBox
           icon={Clock}
           label="Estimated Downtime"
-          value={incident.downtime_estimate || 'N/A'}
+          value={incident.downtime_estimate || (incident.diagnosis && incident.diagnosis.downtime_estimate) || 'N/A'}
           color="#ffaa00"
         />
         <DetailBox
           icon={Wrench}
           label="Recommended Action"
-          value={incident.recommended_action || 'N/A'}
+          value={incident.recommended_action || (incident.diagnosis && incident.diagnosis.recommended_action) || 'N/A'}
           color="#00d4ff"
         />
       </div>
@@ -160,26 +160,27 @@ function DiagnosisCard({ incident, index }) {
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {sop.steps.slice(0, 6).map((step, i) => (
+            {sop.steps.map((step, i) => (
               <div
                 key={i}
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 10,
-                  padding: '6px 10px',
+                  padding: '8px 12px',
                   borderRadius: 8,
-                  background: 'rgba(0, 255, 136, 0.02)',
+                  background: i % 2 === 0 ? 'rgba(0, 255, 136, 0.03)' : 'transparent',
+                  border: '1px solid rgba(0, 255, 136, 0.06)',
                 }}
               >
                 <span
                   style={{
-                    width: 22,
-                    height: 22,
+                    width: 24,
+                    height: 24,
                     borderRadius: 6,
-                    background: 'rgba(0, 255, 136, 0.1)',
+                    background: 'rgba(0, 255, 136, 0.12)',
                     color: '#00ff88',
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: 700,
                     display: 'flex',
                     alignItems: 'center',
@@ -189,23 +190,23 @@ function DiagnosisCard({ incident, index }) {
                 >
                   {step.step_number || i + 1}
                 </span>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>
-                    {step.action}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    {step.action || step}
                   </div>
                   {step.safety_note && (
-                    <div style={{ fontSize: 10, color: '#ffaa00', marginTop: 2 }}>
+                    <div style={{
+                      fontSize: 11, color: '#ffaa00', marginTop: 4,
+                      padding: '3px 8px', borderRadius: 4,
+                      background: 'rgba(255,170,0,0.08)',
+                      display: 'inline-block',
+                    }}>
                       ⚠ {step.safety_note}
                     </div>
                   )}
                 </div>
               </div>
             ))}
-            {sop.steps.length > 6 && (
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', paddingLeft: 10 }}>
-                +{sop.steps.length - 6} more steps...
-              </div>
-            )}
           </div>
         </div>
       )}

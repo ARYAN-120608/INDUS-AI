@@ -1,270 +1,310 @@
 /**
- * Indus AI — Factory Overview Page (Dashboard Home)
- *
- * Layout:
- *  ① KPI Bar — 6 live metrics across the top
- *  ② Two-column main grid:
- *      LEFT:  Interactive 3D Factory Model (R3F, status animations)
- *      RIGHT: Machine Status Cards (live data)
- *  ③ Production Metrics — efficiency gauges, throughput, OEE
- *  ④ Real-Time Sensor Charts — auto-selected or click-to-focus
+ * Indus AI — Overview Page
+ * A clean introduction dashboard explaining what this project does.
  */
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Thermometer, Activity, Cpu, Info } from 'lucide-react';
-import useStore from '../stores/useStore';
-import KPIBar from '../components/dashboard/KPIBar';
-import MachineCard from '../components/dashboard/MachineCard';
-import SensorChart from '../components/dashboard/SensorChart';
-import ProductionMetrics from '../components/dashboard/ProductionMetrics';
-import FactoryScene3D from '../components/3d_factory/FactoryScene3D';
-import { MACHINE_TYPES } from '../utils/constants';
+import React from 'react';
+import { motion } from 'framer-motion';
+import {
+  BrainCircuit,
+  Activity,
+  ShieldAlert,
+  Ticket,
+  Bell,
+  Factory,
+  Cpu,
+  Zap,
+  BarChart2,
+  Server,
+  ArrowRight,
+  Flame,
+  Waves,
+  Gauge,
+  Wind,
+  Filter,
+  Database,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+const FEATURES = [
+  {
+    icon: Activity,
+    color: '#00d4ff',
+    title: 'Real-Time Sensor Monitoring',
+    description:
+      'Continuously streams live telemetry from 7 critical refinery subsystems — temperature, pressure, vibration, RPM, flow rate, and more — updating every 5 seconds.',
+  },
+  {
+    icon: BrainCircuit,
+    color: '#9d00ff',
+    title: 'AI Diagnostic Engine',
+    description:
+      'Indus AI uses a rule-based diagnostic engine to analyze sensor data patterns, detect anomalies, and pinpoint the root cause of equipment faults with 95% confidence.',
+  },
+  {
+    icon: ShieldAlert,
+    color: '#ff2a2a',
+    title: 'Fault Detection & Alerts',
+    description:
+      'Automatically detects critical faults such as pump cavitation, compressor surge, heat fouling, and column flooding — instantly generating alerts when thresholds are breached.',
+  },
+  {
+    icon: Ticket,
+    color: '#ffaa00',
+    title: 'Auto Ticket Generation',
+    description:
+      'Every detected fault automatically raises a maintenance ticket with priority level, affected machine, and fault details — so your team never misses an issue.',
+  },
+  {
+    icon: Bell,
+    color: '#00ffcc',
+    title: 'Alert Management',
+    description:
+      'A dedicated alerts feed captures all system events in real time, ordered by severity. Alerts are marked as read once reviewed, keeping your team focused on what matters.',
+  },
+  {
+    icon: BarChart2,
+    color: '#00ff88',
+    title: 'SOP Step-by-Step Guidance',
+    description:
+      'For every diagnosed fault, the AI Analysis page provides Standard Operating Procedure (SOP) steps — actionable instructions to resolve the issue safely and efficiently.',
+  },
+];
+
+const MACHINES = [
+  { Icon: Flame,    color: '#ef4444', bg: 'rgba(239,68,68,0.12)',    name: 'Distillation Column C-101',  type: 'Distillation Column' },
+  { Icon: Waves,    color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',   name: 'Heat Exchanger HX-201',       type: 'Heat Exchanger'      },
+  { Icon: Gauge,    color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',   name: 'Pump Station P-301',          type: 'Pump Station'        },
+  { Icon: Wind,     color: '#06b6d4', bg: 'rgba(6,182,212,0.12)',    name: 'Cooling Tower CT-401',        type: 'Cooling Tower'       },
+  { Icon: Filter,   color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)',   name: 'Separator Unit V-501',        type: 'Separator Unit'      },
+  { Icon: Zap,      color: '#f97316', bg: 'rgba(249,115,22,0.12)',   name: 'Compressor K-601',            type: 'Compressor'          },
+  { Icon: Database, color: '#14b8a6', bg: 'rgba(20,184,166,0.12)',   name: 'Storage Tank TK-701',         type: 'Storage Tank'        },
+];
+
+const NAV_LINKS = [
+  { icon: Factory,      label: '3D Factory',           path: '/factory',  color: '#00d4ff', desc: 'Explore the interactive 3D refinery model' },
+  { icon: Server,       label: 'Machines',              path: '/machines', color: '#00ffcc', desc: 'View live metrics for each machine' },
+  { icon: BrainCircuit, label: 'AI Analysis',           path: '/analysis', color: '#9d00ff', desc: 'See AI diagnostics and SOP guidance' },
+  { icon: Ticket,       label: 'Tickets',               path: '/tickets',  color: '#ffaa00', desc: 'Manage all auto-generated maintenance tickets' },
+];
+
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { delay, duration: 0.45, ease: 'easeOut' },
+});
 
 export default function OverviewPage() {
-  const machines = useStore((s) => s.machines);
-  const machineHistory = useStore((s) => s.machineHistory);
-  const [selectedMachine, setSelectedMachine] = useState(null);
-
-  const machineList = Object.values(machines);
-  const selectedHistory = selectedMachine
-    ? machineHistory[selectedMachine.machine_id] || []
-    : [];
-
-  const criticalCount = machineList.filter((m) => m.status === 'critical').length;
+  const navigate = useNavigate();
 
   return (
-    <div>
-      {/* ① KPI Strip */}
-      <KPIBar />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
 
-      {/* ② Main Grid: 3D Factory Model + Machine Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 16, marginBottom: 16 }}>
+      {/* ─── Hero Banner ─────────────────────────────────────── */}
+      <motion.div
+        className="glass-card"
+        style={{
+          padding: '40px 40px 32px',
+          background: 'linear-gradient(135deg, rgba(0,212,255,0.06) 0%, rgba(0,102,255,0.04) 50%, rgba(157,0,255,0.04) 100%)',
+          borderColor: 'rgba(0,212,255,0.2)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+        {...fadeUp(0)}
+      >
+        {/* Decorative glow */}
+        <div style={{
+          position: 'absolute', top: -60, right: -60,
+          width: 240, height: 240, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
 
-        {/* LEFT — 3D Factory Model */}
-        <div>
-          <div className="section-header" style={{ marginBottom: 10 }}>
-            <div className="section-title" style={{ fontSize: 15 }}>
-              <Cpu size={16} className="icon" />
-              Live 3D Factory Model
-              {criticalCount > 0 && (
-                <span style={{
-                  fontSize: 10, padding: '2px 8px', borderRadius: 6,
-                  background: 'rgba(255, 42, 42, 0.15)', color: '#ff2a2a', fontWeight: 700,
-                  animation: 'blink-red 0.8s ease-in-out infinite',
-                }}>
-                  ● {criticalCount} CRITICAL
-                </span>
-              )}
-            </div>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Info size={11} />
-              Drag to rotate · Scroll to zoom
-            </span>
-          </div>
-
-          {/* 3D Canvas */}
-          <div style={{ height: 400, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-subtle)', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-            <FactoryScene3D />
-          </div>
-
-          {/* Legend */}
-          <div style={{
-            display: 'flex', gap: 16, marginTop: 8, padding: '6px 10px',
-            background: 'var(--bg-secondary)', borderRadius: 8,
-            border: '1px solid var(--border-subtle)',
-          }}>
-            {[
-              { color: '#22ff88', label: 'Healthy', dot: true },
-              { color: '#ffaa00', label: 'Warning — amber pulse', dot: true },
-              { color: '#ff2222', label: 'Critical — red blink', dot: true },
-            ].map((item) => (
-              <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10 }}>
-                <span style={{
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: item.color,
-                  boxShadow: `0 0 6px ${item.color}`,
-                  display: 'inline-block', flexShrink: 0,
-                }} />
-                <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* RIGHT — Machine Status Cards */}
-        <div>
-          <div className="section-header" style={{ marginBottom: 10 }}>
-            <div className="section-title" style={{ fontSize: 15 }}>
-              <Activity size={16} className="icon" />
-              Machine Status
-            </div>
-          </div>
-          <div style={{ height: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
-            {machineList.length > 0 ? (
-              machineList.map((m) => (
-                <MachineCard
-                  key={m.machine_id}
-                  machine={m}
-                  onClick={setSelectedMachine}
-                />
-              ))
-            ) : (
-              Object.entries(MACHINE_TYPES).map(([id, type]) => (
-                <div key={id} className="metric-card shimmer" style={{ height: 100 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>
-                    {type}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'JetBrains Mono'" }}>
-                    {id} — Awaiting data...
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ③ Production Metrics — replaces old Digital Twin position */}
-      <div style={{ marginBottom: 16 }}>
-        <div className="section-header" style={{ marginBottom: 10 }}>
-          <div className="section-title" style={{ fontSize: 15 }}>
-            <Activity size={16} className="icon" />
-            Production &amp; Performance Metrics
-          </div>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Live — updates every 5s</span>
-        </div>
-        <ProductionMetrics />
-      </div>
-
-      {/* ④ Real-Time Sensor Charts */}
-      <AnimatePresence mode="wait">
-        {selectedMachine ? (
-          <SelectedMachineCharts
-            key="selected"
-            machine={selectedMachine}
-            history={selectedHistory}
-            onClose={() => setSelectedMachine(null)}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 20 }}>
+          <img
+            src="/indus-ai.svg"
+            alt="Indus AI"
+            style={{
+              width: 60, height: 60, borderRadius: 16, flexShrink: 0,
+              boxShadow: '0 0 24px rgba(0,212,255,0.4)',
+              display: 'block',
+            }}
           />
-        ) : (
-          <DefaultCharts key="default" machineList={machineList} machineHistory={machineHistory} />
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// ─── Selected machine full-sensor view ────────────────────────────────────────
-function SelectedMachineCharts({ machine, history, onClose }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-    >
-      <div className="section-header">
-        <div className="section-title" style={{ fontSize: 15 }}>
-          <Thermometer size={16} className="icon" />
-          {machine.machine_type} ({machine.machine_id}) — Live Telemetry
-          <span style={{
-            fontSize: 10, padding: '2px 8px', borderRadius: 6,
-            background: machine.status === 'critical' ? '#ff336620' : '#00d4ff15',
-            color: machine.status === 'critical' ? '#ff3366' : '#00d4ff',
-            fontWeight: 600,
-          }}>
-            {machine.status?.toUpperCase()}
-          </span>
-        </div>
-        <button
-          onClick={onClose}
-          style={{
-            background: 'rgba(255,51,102,0.08)',
-            border: '1px solid rgba(255,51,102,0.25)',
-            borderRadius: 8,
-            padding: '6px 12px',
-            color: '#ff3366',
-            cursor: 'pointer',
-            fontSize: 12,
-            display: 'flex', alignItems: 'center', gap: 4,
-          }}
-        >
-          <X size={14} /> Close
-        </button>
-      </div>
-      <div className="grid-4">
-        <SensorChart data={history} sensorKey="temperature" />
-        <SensorChart data={history} sensorKey="vibration" />
-        <SensorChart data={history} sensorKey="rpm" />
-        <SensorChart data={history} sensorKey="bearing_health" />
-      </div>
-      <div className="grid-4" style={{ marginTop: 12 }}>
-        <SensorChart data={history} sensorKey="power_consumption" />
-        <SensorChart data={history} sensorKey="pressure" />
-        <SensorChart data={history} sensorKey="oil_level" />
-        <SensorChart data={history} sensorKey="efficiency" />
-      </div>
-    </motion.div>
-  );
-}
-
-// ─── Default charts (highest priority machine) ────────────────────────────────
-function DefaultCharts({ machineList, machineHistory }) {
-  const priorityMachine =
-    machineList.find((m) => m.status === 'critical') ||
-    machineList.find((m) => m.status === 'warning') ||
-    machineList[0];
-
-  const history = priorityMachine ? machineHistory[priorityMachine.machine_id] || [] : [];
-
-  if (!priorityMachine) {
-    return (
-      <div>
-        <div className="section-header">
-          <div className="section-title" style={{ fontSize: 15 }}>
-            <Thermometer size={16} className="icon" />
-            Real-Time Sensor Charts
+          <div>
+            <h1 style={{
+              fontSize: 32, fontWeight: 800, margin: '0 0 6px',
+              fontFamily: "'Syne', sans-serif",
+              background: 'linear-gradient(135deg, #1a73e8 0%, #00d4ff 50%, #00ff88 100%)',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              color: 'transparent',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.03em',
+              display: 'inline-block',
+            }}>
+              INDUS AI
+            </h1>
+            <div style={{
+              fontSize: 14, color: 'var(--accent-cyan)',
+              fontFamily: "'JetBrains Mono', monospace",
+              letterSpacing: '0.12em', fontWeight: 500,
+            }}>
+              INDUSTRIAL AI MONITORING PLATFORM
+            </div>
           </div>
         </div>
-        <div className="grid-4">
-          {['temperature', 'vibration', 'rpm', 'bearing_health'].map((sensor) => (
-            <div key={sensor} className="chart-container shimmer" style={{ height: 220 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Awaiting sensor data...</span>
+
+        <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.8, maxWidth: 780, margin: 0 }}>
+          Indus AI is an intelligent factory monitoring system built for oil refinery operations. It combines 
+          <strong style={{ color: 'var(--text-primary)' }}> real-time sensor telemetry</strong>, an 
+          <strong style={{ color: 'var(--accent-purple)' }}> AI-powered diagnostic engine</strong>, and 
+          <strong style={{ color: 'var(--accent-green)' }}> automated maintenance workflows</strong> into a 
+          single unified command center — giving operators complete visibility into the health of their plant 
+          and actionable guidance to resolve faults before they cause downtime.
+        </p>
+
+        {/* Stats row */}
+        <div style={{ display: 'flex', gap: 32, marginTop: 28, flexWrap: 'wrap' }}>
+          {[
+            { value: '7',   label: 'Subsystems Monitored', color: '#00d4ff' },
+            { value: '49+', label: 'Live Sensor Streams',  color: '#00ffcc' },
+            { value: '7',   label: 'Fault Types Detected', color: '#9d00ff' },
+            { value: '95%', label: 'AI Confidence Level',  color: '#00ff88' },
+            { value: '5s',  label: 'Update Frequency',     color: '#ffaa00' },
+          ].map((s) => (
+            <div key={s.label}>
+              <div style={{ fontSize: 28, fontWeight: 800, color: s.color, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>
+                {s.value}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{s.label}</div>
             </div>
           ))}
         </div>
-      </div>
-    );
-  }
+      </motion.div>
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-    >
-      <div className="section-header">
-        <div className="section-title" style={{ fontSize: 15 }}>
-          <Thermometer size={16} className="icon" />
-          {priorityMachine.machine_type} — Live Telemetry
-          <span style={{
-            fontSize: 10, padding: '2px 8px', borderRadius: 6,
-            background: `${priorityMachine.status === 'critical' ? '#ff336620' : '#00d4ff15'}`,
-            color: priorityMachine.status === 'critical' ? '#ff3366' : '#00d4ff',
-            fontWeight: 600,
-          }}>
-            {priorityMachine.status?.toUpperCase()}
-          </span>
+      {/* ─── What This System Does ────────────────────────────── */}
+      <motion.section {...fadeUp(0.1)}>
+        <div className="section-header" style={{ marginBottom: 20 }}>
+          <div className="section-title" style={{ fontSize: 18 }}>
+            <Zap size={18} className="icon" />
+            What This System Does
+          </div>
         </div>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-          Click a machine card to view its specific charts
-        </span>
-      </div>
-      <div className="grid-4">
-        <SensorChart data={history} sensorKey="temperature" />
-        <SensorChart data={history} sensorKey="vibration" />
-        <SensorChart data={history} sensorKey="rpm" />
-        <SensorChart data={history} sensorKey="bearing_health" />
-      </div>
-    </motion.div>
+        <div className="grid-3" style={{ gap: 16 }}>
+          {FEATURES.map((feat, i) => {
+            const Icon = feat.icon;
+            return (
+              <motion.div
+                key={feat.title}
+                className="glass-card"
+                style={{ padding: 20 }}
+                {...fadeUp(0.12 + i * 0.06)}
+              >
+                <div style={{
+                  width: 40, height: 40, borderRadius: 10, marginBottom: 14,
+                  background: `${feat.color}18`,
+                  border: `1px solid ${feat.color}30`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Icon size={20} color={feat.color} />
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
+                  {feat.title}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                  {feat.description}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.section>
+
+      <motion.section {...fadeUp(0.2)}>
+        <div className="section-header" style={{ marginBottom: 20 }}>
+          <div className="section-title" style={{ fontSize: 18 }}>
+            <Server size={18} className="icon" />
+            Monitored Subsystems
+          </div>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>7 refinery machines under continuous surveillance</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          {MACHINES.map((m, i) => {
+            const { Icon, color, bg, name, type } = m;
+            return (
+              <motion.div
+                key={name}
+                className="glass-card"
+                style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}
+                {...fadeUp(0.22 + i * 0.04)}
+              >
+                {/* Same icon badge style as MachinesPage */}
+                <div style={{
+                  width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                  background: bg,
+                  border: `1.5px solid ${color}30`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: `0 4px 12px ${color}15`,
+                }}>
+                  <Icon size={20} color={color} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                    {name}
+                  </div>
+                  <div style={{ fontSize: 10, color: color, fontWeight: 600, marginTop: 2 }}>
+                    {type}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.section>
+
+      {/* ─── Navigate to Sections ────────────────────────────── */}
+      <motion.section {...fadeUp(0.3)}>
+        <div className="section-header" style={{ marginBottom: 20 }}>
+          <div className="section-title" style={{ fontSize: 18 }}>
+            <BarChart2 size={18} className="icon" />
+            Explore the Dashboard
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+          {NAV_LINKS.map((link, i) => {
+            const Icon = link.icon;
+            return (
+              <motion.div
+                key={link.path}
+                className="glass-card"
+                style={{ padding: '18px 16px', cursor: 'pointer', textAlign: 'center' }}
+                {...fadeUp(0.32 + i * 0.05)}
+                onClick={() => navigate(link.path)}
+                whileHover={{ scale: 1.03, borderColor: link.color }}
+              >
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, margin: '0 auto 12px',
+                  background: `${link.color}15`,
+                  border: `1px solid ${link.color}30`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Icon size={20} color={link.color} />
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+                  {link.label}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                  {link.desc}
+                </div>
+                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: link.color, fontSize: 11, fontWeight: 600 }}>
+                  Open <ArrowRight size={12} />
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.section>
+
+    </div>
   );
 }

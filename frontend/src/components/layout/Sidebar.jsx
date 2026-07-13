@@ -10,20 +10,20 @@ import {
   LayoutDashboard,
   BrainCircuit,
   Ticket,
-  AlertTriangle,
   Settings,
   Activity,
   Sun,
   Moon,
+  Server,
 } from 'lucide-react';
 import useStore from '../../stores/useStore';
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Overview' },
   { path: '/factory', icon: Factory, label: '3D Factory' },
+  { path: '/machines', icon: Server, label: 'Machines' },
   { path: '/analysis', icon: BrainCircuit, label: 'AI Analysis' },
   { path: '/tickets', icon: Ticket, label: 'Tickets' },
-  { path: '/alerts', icon: AlertTriangle, label: 'Alerts' },
 ];
 
 export default function Sidebar() {
@@ -48,21 +48,15 @@ export default function Sidebar() {
     <aside className="sidebar" style={{ background: 'var(--bg-secondary)', borderRight: '1px solid var(--border-subtle)' }}>
       {/* Logo */}
       <div
-        style={{
-          width: 42,
-          height: 42,
-          borderRadius: 12,
-          background: 'linear-gradient(135deg, #00d4ff, #0066ff)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: 24,
-          cursor: 'pointer',
-          boxShadow: '0 0 20px rgba(0, 212, 255, 0.3)',
-        }}
+        style={{ marginBottom: 24, cursor: 'pointer' }}
         onClick={() => navigate('/')}
+        title="INDUS AI — Home"
       >
-        <Activity size={22} color="white" strokeWidth={2.5} />
+        <img
+          src="/indus-ai.svg"
+          alt="Indus AI"
+          style={{ width: 42, height: 42, borderRadius: 12, display: 'block' }}
+        />
       </div>
 
       {/* Navigation */}
@@ -78,27 +72,6 @@ export default function Sidebar() {
               title={item.label}
             >
               <Icon size={20} />
-              {item.path === '/alerts' && unreadAlerts > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: 6,
-                    right: 6,
-                    width: 16,
-                    height: 16,
-                    borderRadius: '50%',
-                    background: '#ff3366',
-                    color: 'white',
-                    fontSize: 9,
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {unreadAlerts > 9 ? '9+' : unreadAlerts}
-                </span>
-              )}
             </div>
           );
         })}

@@ -10,7 +10,8 @@ import OverviewPage from './pages/OverviewPage';
 import FactoryPage from './pages/FactoryPage';
 import AnalysisPage from './pages/AnalysisPage';
 import TicketsPage from './pages/TicketsPage';
-import AlertsPage from './pages/AlertsPage';
+
+import MachinesPage from './pages/MachinesPage';
 import { useWebSocket } from './hooks/useWebSocket';
 import Loader from './components/layout/Loader';
 
@@ -25,9 +26,10 @@ function AppContent() {
         <Route element={<Layout />}>
         <Route path="/" element={<OverviewPage />} />
         <Route path="/factory" element={<FactoryPage />} />
+        <Route path="/machines" element={<MachinesPage />} />
         <Route path="/analysis" element={<AnalysisPage />} />
         <Route path="/tickets" element={<TicketsPage />} />
-        <Route path="/alerts" element={<AlertsPage />} />
+
       </Route>
     </Routes>
     </>
